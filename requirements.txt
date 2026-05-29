@@ -1,6 +1,0 @@
-uproot
-numpy
-pandas
-matplotlib
-scipy
-awkward
