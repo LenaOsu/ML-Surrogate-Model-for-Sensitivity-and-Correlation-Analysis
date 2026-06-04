@@ -90,7 +90,7 @@ These predictions are based on the pre-existing histograms that I could extract 
 
 I generated N pseudo data simulating momentum and angle prediction by sample and reaction, varying the center value around the bestfit value at one sigma range from the nominal predictions. With this script, one can compare the pseudo data prediction and the nominal (truth) one. 
 
-![Pseudo data predictions](./outputs/plots/pseudo_data_pred_momentum_noNeg.png)
+![Pseudo data predictions](./outputs/plots/truth_vs_fluctuated_distrib.png)
 
 ## C/ Correlation Matrices
 
@@ -123,7 +123,7 @@ Overall, ML models act as a diagnostic tool to reveal hidden structure in the pr
 
 I really like 3D plots. Here one can find tools to produce 3D visualization plots drawing the bin sensitivity for a specific parameter. As a reminder, this script is used calling labels on graphs extracted from the input ROOT file. So One should adapt this part changing the paths to access to the concerned graphs. 
 
-![Bin Response](./outputs/plots/3Dplot_bin_prediction_example.png)
+![Bin Response](./outputs/plots/3Dplot_bin_prediction_example_with_jauge.png)
 
 
 What will you need ?
