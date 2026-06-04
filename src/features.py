@@ -215,6 +215,8 @@ def propagate_to_hist(y_nominal, theta, mean, R):
     shift = R @ delta
 
     shift = np.tanh(shift)
+    print("shift std over bins:", np.std(shift))
+    print("shift per bin variance:", np.var(shift, axis=0))
 
     return y_nominal * (1 + 0.1 * shift)
 
@@ -244,6 +246,8 @@ def histogram_prediction_pseudo_data(
                 )
                 y = predictions[key]["values"]
                 R = R_dict[key]
+                print("R per bin variance:", np.std(R, axis=1))
+                #R += 0.01 * np.random.randn(*R.shape) #break uniformity of R across bins, to make it more realistic
 
                 theta_samples = sample_theta(mean, cov, n_samples)
 

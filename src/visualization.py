@@ -278,13 +278,15 @@ def heatmap_visualization(predictions, R_dict, mean, cov,
                 ])
 
                 y0 = y
-                Y_norm = Y / (y0 + 1e-8) - 1
+                #Y_norm = Y / (y0 + 1e-8) - 1
+                Y_norm = (Y - y0)/(np.std(Y, axis=0) + 1e-8)#normalization per bin
 
                 print("bouuuuu")
 
                 corr_sys_bin = np.corrcoef(
                     X.T, Y_norm.T
                 )[:X.shape[1], X.shape[1]:]
+                print("bin-wise correlation variance:",np.std(corr_sys_bin, axis=0).mean())
 
                 print("blblblbl")
 
