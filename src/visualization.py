@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from src.features import sample_theta
 from src.features import propagate_to_hist
+from src.features import compute_R_per_hist
+from src.features import normalize
 import seaborn as sns
 from sklearn.decomposition import PCA
 import plotly.graph_objects as go
@@ -18,12 +20,15 @@ pio.renderers.default = "browser"
 def nominal_prediction_visualization(predictions, samples, variables, reactions):
 
     for sample in samples:
+        s = normalize(sample)
         for variable in variables:
+            v = normalize(variable)
             for reaction in reactions:
+                r = normalize(reaction)
 
                 try:
-                    y = predictions[sample][variable][reaction]["values"]
-                    edges = predictions[sample][variable][reaction]["edges"]
+                    y = predictions[s][v][r]["values"]
+                    edges = predictions[s][v][r]["edges"]
 
                     plt.figure(figsize=(6,4))
 
@@ -41,44 +46,48 @@ def nominal_prediction_visualization(predictions, samples, variables, reactions)
                     print(f"Erreur {reaction}: {e}")
     return
 
+def shifted_prediction_visualization(predictions, samples, variables, reactions, mean, cov, R_dict):
 
-def shifted_prediction_visualization(predictions, samples, variables, reactions, y_pseudo_data=None):
-
-    for sample in samples:
-        for variable in variables:
-            for reaction in reactions:
+    for s in samples:
+        s = normalize(s)
+        for v in variables:
+            v = normalize(v)
+            for r in reactions:
+                r = normalize(r)
 
                 try:
-                    y = predictions[sample][variable][reaction]["values"]
-                    edges = predictions[sample][variable][reaction]["edges"]
+                    y = predictions[s][v][r]["values"]
+                    R = R_dict[(s, v, r)]
 
-                    Bins = np.arange(len(y))
+                    theta_samples = sample_theta(mean, cov, 1000)
+
+                    pseudo = np.array([propagate_to_hist(y, theta, mean, R) for theta in theta_samples])
+
+                    y = propagate_to_hist(y, mean, mean, R)  # nominal = bestfit
+
+                    bins = np.arange(len(y))
 
                     plt.figure(figsize=(8,5))
 
-                    for i in range(y_pseudo_data.shape[0]):
-                        plt.scatter(Bins, y_pseudo_data[i], color='blue', alpha=0.05)
+                    for i in range(pseudo.shape[0]):
+                        plt.scatter(bins, pseudo[i], color='blue', alpha=0.05)
 
-                    mean_bins = y_pseudo_data.mean(axis=0)
-                    std_bins  = y_pseudo_data.std(axis=0)
+                    mean_bins = pseudo.mean(axis=0)
+                    std_bins = pseudo.std(axis=0)
 
-                    plt.figure(figsize=(6,4))
+                    plt.step(bins, mean_bins, color='red', linewidth=2, label='mean pseudo')
+                    plt.fill_between(bins, mean_bins-std_bins, mean_bins+std_bins, color='red', alpha=0.3)
 
-                    plt.step(Bins, mean_bins, color='red', linewidth=2, label='mean pseudo data')
-                    plt.fill_between(Bins, mean_bins-std_bins, mean_bins+std_bins, color='red', alpha=0.3, label='±1σ')
+                    plt.step(bins, y, color='black', linewidth=2, label='nominal')
 
-                    plt.step(Bins, y, color='black', linewidth=2, label='nominal')
-
-                    plt.title(f"{sample} | {variable} | {reaction}")
-                    plt.xlabel("bin")
-                    plt.ylabel("events")
+                    plt.title(f"{s} | {v} | {r}")
                     plt.legend()
-                    plt.grid(True)
-                    #plt.show()
-                
+                    plt.grid()
+                    plt.show()
+
                 except Exception as e:
-                    print(f"Erreur {reaction}: {e}")
-    return
+                    print(f"Erreur {s}-{v}-{r}: {e}")
+
 
 def scatter_PCA(X_pca, dist):
 
@@ -207,6 +216,7 @@ def interactive_plot_3D(cov_labels, X_test, modelRF):
 
         if len(filtered) > 0:
             dropdown.options = filtered
+            dropdown.value = filtered[0] 
 
     search_box.observe(update_dropdown, names='value')
 
@@ -227,92 +237,59 @@ def interactive_plot_3D(cov_labels, X_test, modelRF):
         {"param_name": dropdown}
     )
 
-    return ui, out
+    #return ui, out
 
+def heatmap_visualization(predictions, R_dict, mean, cov,
+                          samples, variables, reactions,
+                          groups, param_names):
 
-def heatmap_visualization(mean, cov, predictions, samples, variables, reactions, R_dict, groups, cov_labels):
-    
-    param_names = np.array(cov_labels)          
-    datasets = {}
-    n_params = len(mean)
-
+    print(type(samples[0]), samples[0])
+    print(type(variables[0]), variables[0])
+    print(type(reactions[0]), reactions[0])
 
     for s in samples:
+        s = normalize(s)
         for v in variables:
+            v = normalize(v)
             for r in reactions:
-                    y_nominal = predictions[s][v][r]["values"]
+                r = normalize(r)
 
-                    key = (s, v, r)
-                    if key not in R_dict:
-                        R_dict[key] = np.random.normal(
-                            0, 0.02,
-                            size=(len(y_nominal), len(mean))
-                        )
-                    R = R_dict[key]
-        
+                try:
+                    y = predictions[s][v][r]["values"]
+                    R = R_dict[(s, v, r)]
+
                     theta_samples = sample_theta(mean, cov, 1000)
+
                     X = np.array(theta_samples)
-                    Y = []
+                    Y = np.array([
+                        propagate_to_hist(y, theta, mean, R)
+                        for theta in X
+                    ])
 
-                    for theta in X:
-                        yy = propagate_to_hist(y_nominal, theta, mean, R)
-                        Y.append(yy)
+                    y0 = y
+                    Y_norm = Y / (y0 + 1e-8) - 1
 
-                    Y = np.array(Y)
-                    Y_norm = Y/(y_nominal + 1e-8) - 1
-                
-                    corr_sys = np.corrcoef(X, rowvar=False)    
+                    corr_sys_bin = np.corrcoef(
+                        X.T, Y_norm.T
+                    )[:X.shape[1], X.shape[1]:]
 
                     for g, idx in groups.items():
-        
-                        if len(idx) < 2:
-                            continue
-        
-                        corr_sub = np.corrcoef(X[:, idx], rowvar=False)
-      
-                        plt.figure(figsize=(5,4))
-                        sns.heatmap(
-                            corr_sub,
-                            cmap="coolwarm",
-                            center=0,
-                            xticklabels=[param_names[i] for i in idx],
-                            yticklabels=[param_names[i] for i in idx]
-                        )
-                        plt.title(f"Sys-Sys {g}")
-                        plt.xticks(rotation=90)
-                        plt.yticks(rotation=0)
-                        plt.tight_layout()
-                        plt.show()
-
-                    corr_sys_bin = np.corrcoef(X.T, Y_norm.T)[:X.shape[1], X.shape[1]:]
-        
-                    for g, idx in groups.items():
-        
                         if len(idx) == 0:
                             continue
-        
-                        corr_sub = corr_sys_bin[idx, :]
-        
+
                         plt.figure(figsize=(8,6))
+
                         sns.heatmap(
-                            corr_sub,
+                            corr_sys_bin[idx, :],
                             cmap="coolwarm",
                             center=0,
                             yticklabels=[param_names[i] for i in idx]
                         )
+
                         plt.title(f"Sys → Bin {g}")
                         plt.xlabel("bins")
                         plt.ylabel("parameters")
-                        plt.tight_layout()
                         plt.show()
-                            
-                    param_names = np.array(param_names)  # IMPORTANT FIX numpy -> list
 
-    return 
-
-def model_superoposition_visu():
-
-
-
-
-    return
+                except Exception as e:
+                    print(f"Erreur {s}-{v}-{r}: {e}")

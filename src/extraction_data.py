@@ -11,13 +11,16 @@ predictions = {}
 def extraction_data(samples, variables, reactions, root_file):
 
     print("Starting the data extraction function...")
+    predictions = {}
 
     #one simply extract the postfit prediction in momentum and direction from the original fitter output
     for sample in samples:
-        predictions[sample] = {}
+        s = normalize(sample)
+        predictions[s] = {}
 
         for variable in variables:
-            predictions[sample][variable] = {}
+            v = normalize(variable)
+            predictions[s][v] = {}
 
             base_path = f"FitterEngine/postFit/samples/histograms/{sample}/{variable}/ReactionCode"
 
@@ -28,6 +31,8 @@ def extraction_data(samples, variables, reactions, root_file):
                 continue
 
             for reaction in reactions:
+                r = normalize(reaction)
+                predictions[s][v][r] = {}
 
                 try:
                     hist = root_file[f"{base_path}/{reaction}/MC_TH1D"]
@@ -35,28 +40,19 @@ def extraction_data(samples, variables, reactions, root_file):
                     values = hist.values()
                     edges = hist.axes[0].edges()
 
-                    predictions[sample][variable][reaction] = {
+                    predictions[s][v][r] = {
                         "values": np.array(values), # number of events per bin
                         "edges": edges # pmu/cos edges
                     }
 
-                    y = predictions[sample][variable][reaction]["values"]
-                    edges = predictions[sample][variable][reaction]["edges"]
+                    y = predictions[s][v][r]["values"]
+                    edges = predictions[s][v][r]["edges"]
 
 
                 except Exception as e:
                     print(f"Erreur {reaction}: {e}")
 
     return predictions, y, edges
-
-def build_prediction(samples, variables, reactions, predictions):
-    
-    for s in samples:
-            for v in variables:
-                for r in reactions:
-                    key = (s, v, r)
-                    y = predictions[s][v][r]["values"]
-    return y
 
 
 def names_goups(root_file):

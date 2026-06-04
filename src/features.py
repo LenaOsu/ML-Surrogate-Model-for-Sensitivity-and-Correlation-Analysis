@@ -50,6 +50,29 @@ def extract_systematics_names(systematics, root_file):
 
     return bestfit_dict, sigma_dict
 
+def build_prediction(samples, variables, reactions, predictions):
+
+
+    output = {}
+
+
+    for s in samples:
+        output[s] = {}
+
+
+        for v in variables:
+            output[s][v] = {}
+
+
+            for r in reactions:
+
+
+                y = predictions[s][v][r]["values"]
+                output[s][v][r] = y
+
+
+    return output
+
 def covariance_matrix_extraction(root_file, bestfit_dict, ):
 
     # Next, we will need to extract the covariance matrix stocked in the root file or yours
@@ -115,61 +138,117 @@ def sample_theta(mean, cov, n):
 
     return np.random.multivariate_normal(mean, cov, size=n)
 
-def propagate_to_hist(y_nominal, theta, mean, R):
+def build_prediction(predictions, samples, variables, reactions):
+    output = {}
 
-    delta = (theta - mean)
+    for s in samples:
+        output[s] = {}
 
-    shift = R @ delta   
+        for v in variables:
+            output[s][v] = {}
 
-    max_factor = np.maximum(1+shift, 0)
+            for r in reactions:
+                output[s][v][r] = predictions[s][v][r]["values"]
 
-    #return y_nominal * (1 + shift)
-    return y_nominal * max_factor
-    #return y_nominal*np.exp(shift)
+    return output
 
-def histogram_prediction_pseudo_data(predictions, samples, variables, reactions, mean, cov):
+def make_base_fn(s, v, r, predictions):
+
+    y0 = predictions[s][v][r]["values"]
+
+    def fn(theta, mean):
+        # modèle simple cohérent
+        delta = theta - mean
+        return y0 * (1 + 0.01 * np.mean(delta))
+
+    return fn
+
+def compute_R_per_hist(mean, sigma, samples, variables, reactions, predictions):
     
     R_dict = {}
 
     for s in samples:
+        s = normalize(s)
         for v in variables:
+            v = normalize(v)
+            for r in reactions:
+                r = normalize(r)
+
+                fn = make_base_fn(s, v, r, predictions)
+
+                y0 = fn(mean, mean) # prediction at bestfit values, should be close to nominal prediction
+                n_bins = len(y0)
+                n_params = len(mean)
+
+                R = np.zeros((n_bins, n_params))
+
+                for j in range(n_params):
+
+                    theta_p = mean.copy()
+                    theta_m = mean.copy()
+
+                    theta_p[j] += sigma[j]
+                    theta_m[j] -= sigma[j]
+
+                    y_p = fn(theta_p, mean)
+                    y_m = fn(theta_m, mean)
+                    print("y_p - y_m =", np.mean(np.abs(y_p - y_m)))
+
+                    R[:, j] = (y_p - y_m) / (2 * sigma[j])
+
+                R_dict[(s,v,r)] = R
+
+    return R_dict
+
+def propagate_to_hist(y_nominal, theta, mean, R):
+
+    delta = theta - mean
+    shift = R @ delta
+
+    shift = np.tanh(shift)
+
+    return y_nominal * (1 + 0.1 * shift)
+
+def histogram_prediction_pseudo_data(
+    predictions,
+    R_dict,
+    samples,
+    variables,
+    reactions,
+    mean,
+    cov,
+    n_samples=1000
+):
+
+    output = {}
+
+    for s in samples:
+        output[s] = {}
+
+        for v in variables:
+            output[s][v] = {}
+
             for r in reactions:
 
-                key = (s, v, r)
-
                 y = predictions[s][v][r]["values"]
+                R = R_dict[(s, v, r)]
 
-                if key not in R_dict:
-                    n_bins = len(y)
-                    n_params = len(mean)
-                    R_dict[key] = np.random.normal(0, 0.02, size=(n_bins, n_params))
+                theta_samples = sample_theta(mean, cov, n_samples)
 
-                R = R_dict[key]
-
-                theta_samples = sample_theta(mean, cov, 1000)
-                print("theta_samples:",len(theta_samples))
-
-                y_mouch = []
+                y_list = []
 
                 for theta in theta_samples:
-        
-                    yy = propagate_to_hist(y, theta, mean, R) 
-                    y_mouch.append(yy)
+                    y_list.append(propagate_to_hist(y, theta, mean, R))
 
-                y_mouch = np.array(y_mouch)
-                print(len(y_mouch))
+                y_list = np.array(y_list)
 
-                Bins = np.arange(len(y))
+                output[s][v][r] = {
+                    "pseudo": y_list,
+                    "mean": y_list.mean(axis=0),
+                    "std": y_list.std(axis=0)
+                }
 
-                plt.figure(figsize=(8,5))
-
-                for i in range(y_mouch.shape[0]):
-                    plt.scatter(Bins, y_mouch[i], color='blue', alpha=0.05)
-
-                mean_bins = y_mouch.mean(axis=0)
-                std_bins  = y_mouch.std(axis=0)
-
-    return mean_bins, std_bins, y_mouch
+    return output
 
 def Mahalanobis_distance(cov, X, mean, Y_norm, Y_base, X_pca):
 
