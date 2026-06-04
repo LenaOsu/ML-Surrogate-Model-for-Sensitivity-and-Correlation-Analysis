@@ -6,7 +6,6 @@ import os
 
 from src.features import normalize
 
-predictions = {}
 
 def extraction_data(samples, variables, reactions, root_file):
 
@@ -15,12 +14,8 @@ def extraction_data(samples, variables, reactions, root_file):
 
     #one simply extract the postfit prediction in momentum and direction from the original fitter output
     for sample in samples:
-        s = normalize(sample)
-        predictions[s] = {}
 
         for variable in variables:
-            v = normalize(variable)
-            predictions[s][v] = {}
 
             base_path = f"FitterEngine/postFit/samples/histograms/{sample}/{variable}/ReactionCode"
 
@@ -32,7 +27,8 @@ def extraction_data(samples, variables, reactions, root_file):
 
             for reaction in reactions:
                 r = normalize(reaction)
-                predictions[s][v][r] = {}
+                key = (normalize(sample), normalize(variable), normalize(reaction))
+                predictions[key] = {}
 
                 try:
                     hist = root_file[f"{base_path}/{reaction}/MC_TH1D"]
@@ -40,18 +36,26 @@ def extraction_data(samples, variables, reactions, root_file):
                     values = hist.values()
                     edges = hist.axes[0].edges()
 
-                    predictions[s][v][r] = {
+                    predictions[key] = {
                         "values": np.array(values), # number of events per bin
                         "edges": edges # pmu/cos edges
                     }
 
-                    y = predictions[s][v][r]["values"]
-                    edges = predictions[s][v][r]["edges"]
+                    y = predictions[key]["values"]
+                    edges = predictions[key]["edges"]
+                    print(type(predictions))
+                    print(type(sample), sample)
+                    print(type(variable), variable)
+                    print(type(reaction), reaction)
 
 
                 except Exception as e:
                     print(f"Erreur {reaction}: {e}")
-
+                    print(type(predictions))
+                    print(type(sample), sample)
+                    print(type(variable), variable)
+                    print(type(reaction), reaction)
+                    
     return predictions, y, edges
 
 

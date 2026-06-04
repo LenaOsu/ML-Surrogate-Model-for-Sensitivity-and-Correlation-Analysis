@@ -63,7 +63,6 @@ def main():
     R_dict = compute_R_per_hist(mean, sigma, samples, variables, reactions, predictions)
     print("R is calculated.")
 
-
     n_bins = len(y)
     n_params = len(mean)
 
@@ -87,7 +86,10 @@ def main():
 
     print("Using key:", example_key)
 
-    rf_model = models_dict[example_key]["rf"]
+    #rf_model = models_dict[example_key]["rf"]
+    #X_test = models_dict[example_key]["X_test"]
+
+    ridge_model = models_dict[example_key]["models"]["ridge"]
     X_test = models_dict[example_key]["X_test"]
 
 
@@ -104,12 +106,14 @@ def main():
     #scatter_PCA(X_pca=X_pca, dist=dist)
     print("scatter plot PCA done.")
 
-    ui, out = interactive_plot_3D(cov_labels, X_test, rf_model)
+    ui, out = interactive_plot_3D(cov_labels, X_test, ridge_model)
                 
     display(ui, out)
 
-    heatmap_visualization(mean, cov_modified, predictions, samples, variables, reactions, R_dict, groups, cov_labels)
+    print("okkkkkk???!!!!")
 
+    heatmap_visualization(predictions, R_dict, mean, cov_modified, samples, variables, reactions, groups, param_names)
+    print("All finished without bugggggssss !!! ")
 
 if __name__ == "__main__":
     main()

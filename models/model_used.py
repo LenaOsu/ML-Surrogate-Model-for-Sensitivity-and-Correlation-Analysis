@@ -27,7 +27,7 @@ def training_model(mean, cov, predictions, samples, variables, reactions, R_dict
 
                 key = (s, v, r)
 
-                y_nominal = predictions[s][v][r]["values"]
+                y_nominal = predictions[key]["values"]
                 R = R_dict[key]
 
                 theta_samples = sample_theta(mean, cov, 1000)
@@ -87,12 +87,38 @@ def models(datasets):
 
         trained = {}
 
+        plt.figure(figsize=(10,6))
+
+        idx = 0  # premier événement du test
+
+        plt.plot(
+            Y_test[idx],
+            color="black",
+            linewidth=3,
+            label="Truth"
+        )
+
         for name, model in modelsplusRF.items():
-
+        
             model.fit(X_train, Y_train)
-            Y_pred = model.predict(X_test)
 
+            Y_pred = model.predict(X_test)
+            print("name:", name, "Y_pred shape:", Y_pred.shape)
             trained[name] = model
+            print("idx:", idx, "Y_pred[idx] shape:", Y_pred[idx].shape)
+
+            plt.plot(
+                Y_pred[idx],
+                linewidth=2,
+                label=name
+            )
+
+        plt.xlabel("Bin")
+        plt.ylabel("Normalized variation")
+        plt.title(f"Histogram prediction comparison : {key}")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
         # PCA (optionnel mais propre)
         pca = PCA(n_components=2)

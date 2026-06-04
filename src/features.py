@@ -57,18 +57,18 @@ def build_prediction(samples, variables, reactions, predictions):
 
 
     for s in samples:
-        output[s] = {}
-
 
         for v in variables:
-            output[s][v] = {}
-
 
             for r in reactions:
+                key = (
+                    normalize(s),
+                    normalize(v),
+                    normalize(r)
+                )
 
-
-                y = predictions[s][v][r]["values"]
-                output[s][v][r] = y
+                y = predictions[key]["values"]
+                output[key] = y
 
 
     return output
@@ -142,19 +142,28 @@ def build_prediction(predictions, samples, variables, reactions):
     output = {}
 
     for s in samples:
-        output[s] = {}
 
         for v in variables:
-            output[s][v] = {}
 
             for r in reactions:
-                output[s][v][r] = predictions[s][v][r]["values"]
+                key = (
+                    normalize(s),
+                    normalize(v),
+                    normalize(r)
+                )
+                output[key] = predictions[key]["values"]
 
     return output
 
 def make_base_fn(s, v, r, predictions):
 
-    y0 = predictions[s][v][r]["values"]
+    key = (
+                    normalize(s),
+                    normalize(v),
+                    normalize(r)
+                )
+
+    y0 = predictions[key]["values"]
 
     def fn(theta, mean):
         # modèle simple cohérent
@@ -223,15 +232,18 @@ def histogram_prediction_pseudo_data(
     output = {}
 
     for s in samples:
-        output[s] = {}
 
         for v in variables:
-            output[s][v] = {}
 
             for r in reactions:
 
-                y = predictions[s][v][r]["values"]
-                R = R_dict[(s, v, r)]
+                key = (
+                    normalize(s),
+                    normalize(v),
+                    normalize(r)
+                )
+                y = predictions[key]["values"]
+                R = R_dict[key]
 
                 theta_samples = sample_theta(mean, cov, n_samples)
 
@@ -242,7 +254,7 @@ def histogram_prediction_pseudo_data(
 
                 y_list = np.array(y_list)
 
-                output[s][v][r] = {
+                output[key] = {
                     "pseudo": y_list,
                     "mean": y_list.mean(axis=0),
                     "std": y_list.std(axis=0)

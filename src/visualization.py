@@ -26,9 +26,11 @@ def nominal_prediction_visualization(predictions, samples, variables, reactions)
             for reaction in reactions:
                 r = normalize(reaction)
 
+                key = (s, v, r)
+
                 try:
-                    y = predictions[s][v][r]["values"]
-                    edges = predictions[s][v][r]["edges"]
+                    y = predictions[key]["values"]
+                    edges = predictions[key]["edges"]
 
                     plt.figure(figsize=(6,4))
 
@@ -56,7 +58,7 @@ def shifted_prediction_visualization(predictions, samples, variables, reactions,
                 r = normalize(r)
 
                 try:
-                    y = predictions[s][v][r]["values"]
+                    y = predictions[(s, v, r)]["values"]
                     R = R_dict[(s, v, r)]
 
                     theta_samples = sample_theta(mean, cov, 1000)
@@ -204,6 +206,7 @@ def interactive_plot_3D(cov_labels, X_test, modelRF):
         description='Param:',
         layout=widgets.Layout(width='700px')
     )
+    print("1")
 
     def update_dropdown(change):
 
@@ -219,6 +222,7 @@ def interactive_plot_3D(cov_labels, X_test, modelRF):
             dropdown.value = filtered[0] 
 
     search_box.observe(update_dropdown, names='value')
+    print("2")
 
     ui = widgets.VBox([
         search_box,
@@ -231,65 +235,82 @@ def interactive_plot_3D(cov_labels, X_test, modelRF):
         X_test=X_test,
         modelRF=modelRF
     )
+    print("3")
 
     out = widgets.interactive_output(
         plot_func,
         {"param_name": dropdown}
     )
+    print("4")
 
-    #return ui, out
+    return ui, out
 
 def heatmap_visualization(predictions, R_dict, mean, cov,
                           samples, variables, reactions,
                           groups, param_names):
 
-    print(type(samples[0]), samples[0])
-    print(type(variables[0]), variables[0])
-    print(type(reactions[0]), reactions[0])
+    print("Starting heatmap visualization...")
 
-    for s in samples:
-        s = normalize(s)
-        for v in variables:
-            v = normalize(v)
-            for r in reactions:
-                r = normalize(r)
+    for sample in samples:
+        for variable in variables:
+            for reaction in reactions:
 
-                try:
-                    y = predictions[s][v][r]["values"]
-                    R = R_dict[(s, v, r)]
+                key = (normalize(sample), normalize(variable), normalize(reaction))
+                print("niceee")
+                #print("key:", key.shape if isinstance(key, np.ndarray) else key)
 
-                    theta_samples = sample_theta(mean, cov, 1000)
+                #try:
+                y = predictions[key]["values"]
+                print(type(predictions))
+                print(type(sample), sample)
+                print(type(variable), variable)
+                print(type(reaction), reaction)
+                R = R_dict[key]
 
-                    X = np.array(theta_samples)
-                    Y = np.array([
-                        propagate_to_hist(y, theta, mean, R)
-                        for theta in X
-                    ])
+                print("heyy")
 
-                    y0 = y
-                    Y_norm = Y / (y0 + 1e-8) - 1
+                theta_samples = sample_theta(mean, cov, 1000)
 
-                    corr_sys_bin = np.corrcoef(
-                        X.T, Y_norm.T
-                    )[:X.shape[1], X.shape[1]:]
+                X = np.array(theta_samples)
+                Y = np.array([
+                    propagate_to_hist(y, theta, mean, R)
+                    for theta in X
+                ])
 
-                    for g, idx in groups.items():
-                        if len(idx) == 0:
-                            continue
+                y0 = y
+                Y_norm = Y / (y0 + 1e-8) - 1
 
-                        plt.figure(figsize=(8,6))
+                print("bouuuuu")
 
-                        sns.heatmap(
-                            corr_sys_bin[idx, :],
-                            cmap="coolwarm",
-                            center=0,
-                            yticklabels=[param_names[i] for i in idx]
-                        )
+                corr_sys_bin = np.corrcoef(
+                    X.T, Y_norm.T
+                )[:X.shape[1], X.shape[1]:]
 
-                        plt.title(f"Sys → Bin {g}")
-                        plt.xlabel("bins")
-                        plt.ylabel("parameters")
-                        plt.show()
+                print("blblblbl")
 
-                except Exception as e:
-                    print(f"Erreur {s}-{v}-{r}: {e}")
+                for g, idx in groups.items():
+                    if len(idx) == 0:
+                        continue
+
+                    plt.figure(figsize=(8,6))
+
+                    sns.heatmap(
+                        corr_sys_bin[idx, :],
+                        cmap="coolwarm",
+                        center=0,
+                        yticklabels=[param_names[i] for i in idx]
+                    )
+                    print("miam")
+
+                    plt.title(f"Sys → Bin {g}")
+                    plt.xlabel("bins")
+                    plt.ylabel("parameters")
+                    plt.show()
+
+                #except Exception as e:
+                 #   print(type(predictions))
+                  #  print(type(sample), sample)
+                   # print(type(variable), variable)
+                   # print(type(reaction), reaction)
+                    #print("so thats here, but why seriously ?")
+                    #print(f"Erreur {sample}-{variable}-{reaction}: {e}")
