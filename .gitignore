@@ -44,6 +44,8 @@ Thumbs.db
 venv/
 env/
 .env/
+*.key
+*.pem
 
 # =========================
 # IDE
