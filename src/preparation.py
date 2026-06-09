@@ -7,7 +7,7 @@ import uproot
 def preparation():
 
     print("Starting the preparation function...")
-    file_path = r"C:\Users\lenao\Project_emulator_python\inputs\fdsFit_Martini1pi_2021.root"
+    file_path = r"path/output.root"
     root_file = uproot.open(file_path)
 
     systematics = [
