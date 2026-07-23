@@ -7,7 +7,7 @@ import uproot
 def preparation():
 
     print("Starting the preparation function...")
-    file_path = r"path/output.root"
+    file_path = r"output.root"
     root_file = uproot.open(file_path)
 
     systematics = [

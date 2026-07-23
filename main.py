@@ -19,7 +19,7 @@ from src.features import histogram_prediction_pseudo_data
 from src.extraction_data import names_goups
 from src.extraction_data import get_index_in_group
 from models.model_used import training_model
-from models.model_used import models
+from models.model_used import models, plot_learning_curve, diagnose_all_models, plot_mlp_loss_curve
 from src.features import Mahalanobis_distance
 from src.visualization import scatter_PCA
 from src.visualization import plot_3D
@@ -78,23 +78,51 @@ def main():
     print("Total parameters:", len(param_names))
 
     print("Training model...")
-    datasets  = training_model(mean, cov_modified, predictions, samples, variables, reactions, R_dict, groups)
+    datasets = training_model(
+        mean,
+        cov_modified,
+        predictions,
+        samples,
+        variables,
+        reactions,
+        R_dict,
+        groups
+    )
     print("Model trained. Datasets prepared.")
 
+    # ==========================
+    # Entraînement des modèles
+    # ==========================
     models_dict = models(datasets)
-    example_key = list(datasets.keys())[0]
 
+    example_key = list(datasets.keys())[0]
     print("Using key:", example_key)
 
-    #rf_model = models_dict[example_key]["rf"]
-    #X_test = models_dict[example_key]["X_test"]
+    # ==========================
+    # Diagnostics
+    # ==========================
+
+    # Learning curves + validation curves Ridge et RF
+    diagnose_all_models(
+        datasets,
+        example_key=example_key
+    )
+
+    # Courbe d'entraînement du MLP
+    mlp_model = models_dict[example_key]["models"]["mlp"]
+    plot_mlp_loss_curve(
+        mlp_model,
+        title=f"MLP learning curve : {example_key}"
+    )
+
+    # ==========================
+    # Choix du modèle utilisé ensuite
+    # ==========================
 
     ridge_model = models_dict[example_key]["models"]["ridge"]
     X_test = models_dict[example_key]["X_test"]
-
-
-    #bins, X_sorted, Y_sorted, dist, cov_inv, diff = Mahalanobis_distance(cov_modified, X_test, mean, Y_test, y_nominal, X_pca)
-    #print("Mahalanobis distance calculated.")
+    Y_test = models_dict[example_key]["Y_test"]
+    X_pca = models_dict[example_key]["X_pca"]
 
     print("distance start to be calculated.")
     cov_inv = inv(cov_modified)
