@@ -11,9 +11,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.decomposition import PCA
 from sklearn.metrics import r2_score, mean_squared_error
 
-from sklearn.model_selection import train_test_split
-import numpy as np
-
 
 def training_model(mean, cov, predictions, samples, variables, reactions, R_dict, groups):
 
@@ -67,11 +64,6 @@ def models(datasets):
             random_state=42
         )
 
-        # NOTE : X a ~700+ colonnes (nb de parametres systematiques) pour ~800
-        # exemples d'entrainement -> risque fort de surapprentissage pour les
-        # modeles a forte capacite (MLP, RF). early_stopping=True sur le MLP
-        # permet de suivre la loss de validation en cours d'entrainement,
-        # comme pour un reseau PyTorch classique.
         modelsplusRF = {
             "linear": LinearRegression(),
             "ridge": RidgeCV(alphas=np.logspace(-3, 3, 13)),  # alpha choisi par CV plutot que fixe
