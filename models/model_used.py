@@ -14,6 +14,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 import numpy as np
 
+
 def training_model(mean, cov, predictions, samples, variables, reactions, R_dict, groups):
 
     datasets = {}
@@ -52,10 +53,7 @@ def training_model(mean, cov, predictions, samples, variables, reactions, R_dict
 
 def models(datasets):
 
-    from sklearn.linear_model import LinearRegression, Ridge
-    from sklearn.neural_network import MLPRegressor
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.decomposition import PCA
+
 
     models_dict = {}
 
