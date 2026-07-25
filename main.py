@@ -19,11 +19,11 @@ from src.features import histogram_prediction_pseudo_data
 from src.extraction_data import names_goups
 from src.extraction_data import get_index_in_group
 from models.model_used import training_model
-from models.model_used import models, plot_learning_curve, diagnose_all_models, plot_mlp_loss_curve
+from models.model_used import models
 from src.features import Mahalanobis_distance
 from src.visualization import scatter_PCA
 from src.visualization import plot_3D
-from src.visualization import heatmap_visualization, interactive_plot_3D
+from src.visualization import heatmap_visualization, interactive_plot_3D, plot_learning_curve, diagnose_all_models, plot_mlp_loss_curve
 from numpy.linalg import inv
 from functools import partial
 
