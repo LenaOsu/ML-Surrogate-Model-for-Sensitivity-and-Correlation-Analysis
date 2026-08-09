@@ -125,6 +125,22 @@ I really like 3D plots. Here one can find tools to produce 3D visualization plot
 
 ![Bin Response](./outputs/plots/3Dplot_bin_prediction_example_with_jauge.png)
 
+## F/ Learning curves — model diagnostics
+
+Learning curves plot the R² score (prediction quality, 1 = perfect) as a function of training-sample size, for both the training set in blue and a cross-validation set (red, shaded band = variance across folds). This is the key diagnostic to decide whether a model needs more data, more regularization, or a different architecture — and, ultimately, which surrogate is trustworthy enough to use for systematic-propagation studies.
+
+![Learning curves](./outputs/plots/learning_curves.png)
+
+**Linear Regression** — Training R² is pinned at 1.0 for every sample size: the model fits the training data exactly. Validation R² is good for small samples (~0.97-0.98) but collapses sharply around N=700 (R² ≈ 0.58, variance band spanning 0.33-0.83) before recovering at N=800. This instability is the classic signature of an unregularized linear model struggling with collinearity between systematic parameters (several flux/cross-section systematics are correlated by construction): a single unlucky cross-validation (CV on plots) fold is enough to destabilize the fitted coefficients.
+
+**Ridge Regression (alpha=1.0)** — Well-behaved curve: training R² around 0.996-0.998, validation R² rising smoothly from 0.967 to 0.991, with the train/validation gap narrowing and a tight variance band. This confirms that L2 regularization stabilizes the linear model against the collinearity seen above. Ridge is the best-performing and most stable model in this comparison — it suggests the underlying systematic → bin-content mapping is close to quasi-linear.
+
+**MLP (64,64)** — R² is negative across the board, including -39 (train) / -68 (validation) at N=80: the network performs worse than simply predicting the mean. Performance improves somewhat around N=180 (-2/-7) then plateaus around -5/-10. This is not primarily a data-noise issue but a training/configuration one: likely insufficient epochs, missing input/output normalization, or a network with too much capacity relative to the available sample size (N=1000). It shows a high-capacity model is not automatically better, and currently needs tuning (feature scaling, learning-rate schedule, regularization) before being usable as a surrogate.
+
+**Random Forest** — Training R² climbs from 0.83 to 0.93 while validation R² climbs more slowly from 0.29 to 0.71: a large train/validation gap typical of unconstrained-depth trees memorizing the training set. Validation performance keeps improving with more data, suggesting more samples and/or hyperparameter tuning (max_depth, min_samples_leaf, n_estimators) would help — but even at N=800 it remains well below Ridge.
+
+**Takeaway**: given the current dataset size (N=1000), a regularized linear model (Ridge) is the most robust and interpretable surrogate for this systematic-propagation problem, while tree-based and neural models need more data and/or tuning before they can be trusted for the same task. Axis scales differ substantially between the four panels (e.g. 0.3-0.9 for Random Forest vs. 0.96-1.0 for Ridge), so the plots should be compared on values, not just visual shape.
+
 
 What will you need ?
 
